@@ -11,11 +11,17 @@ pub const Runtime = enum {
     /// approach to building the application.
     gtk,
 
+    /// WinUI3. Native Windows 10-11 application. This uses WinUI3 with
+    /// XAML for building a modern native Windows application.
+    winui3,
+
     pub fn default(target: std.Target) Runtime {
         return switch (target.os.tag) {
             // The Linux and FreeBSD default is GTK because it is a full
             // featured application.
             .linux, .freebsd => .gtk,
+            // Windows uses WinUI3 for a native application
+            .windows => .winui3,
             // Otherwise, we do NONE so we don't create an exe and we create
             // libghostty. On macOS, Xcode is used to build the app that links
             // to libghostty.

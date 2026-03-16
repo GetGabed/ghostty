@@ -27,6 +27,13 @@ pub const Backend = enum {
     /// supports).
     web_canvas,
 
+    /// DirectWrite for font discovery and rendering (Windows).
+    directwrite,
+
+    /// DirectWrite for font discovery and rendering, HarfBuzz for shaping
+    /// (Windows, advanced typography).
+    directwrite_harfbuzz,
+
     /// Returns the default backend for a build environment. This is
     /// meant to be called at comptime by the build.zig script. To get the
     /// backend look at build_options.
@@ -39,6 +46,8 @@ pub const Backend = enum {
                 .browser => .web_canvas,
             };
         }
+
+        if (target.os.tag == .windows) return .directwrite;
 
         // macOS also supports "coretext_freetype" but there is no scenario
         // that is the default. It is only used by people who want to
@@ -60,6 +69,8 @@ pub const Backend = enum {
             .coretext_harfbuzz,
             .coretext_noshape,
             .web_canvas,
+            .directwrite,
+            .directwrite_harfbuzz,
             => false,
         };
     }
@@ -75,6 +86,8 @@ pub const Backend = enum {
             .freetype,
             .fontconfig_freetype,
             .web_canvas,
+            .directwrite,
+            .directwrite_harfbuzz,
             => false,
         };
     }
@@ -89,6 +102,8 @@ pub const Backend = enum {
             .coretext_harfbuzz,
             .coretext_noshape,
             .web_canvas,
+            .directwrite,
+            .directwrite_harfbuzz,
             => false,
         };
     }
@@ -99,9 +114,28 @@ pub const Backend = enum {
             .fontconfig_freetype,
             .coretext_freetype,
             .coretext_harfbuzz,
+            .directwrite_harfbuzz,
             => true,
 
             .coretext,
+            .coretext_noshape,
+            .web_canvas,
+            .directwrite,
+            => false,
+        };
+    }
+
+    pub fn hasDirectwrite(self: Backend) bool {
+        return switch (self) {
+            .directwrite,
+            .directwrite_harfbuzz,
+            => true,
+
+            .freetype,
+            .fontconfig_freetype,
+            .coretext,
+            .coretext_freetype,
+            .coretext_harfbuzz,
             .coretext_noshape,
             .web_canvas,
             => false,

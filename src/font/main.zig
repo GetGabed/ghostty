@@ -28,6 +28,7 @@ pub const SpriteFace = sprite.Face;
 pub const Descriptor = discovery.Descriptor;
 pub const Discover = discovery.Discover;
 pub const Library = library.Library;
+pub const DirectWrite = @import("DirectWrite.zig");
 
 // If we're targeting wasm then we export some wasm APIs.
 comptime {
