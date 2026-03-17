@@ -24,8 +24,8 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const apprt = @import("../../apprt.zig");
-const CoreApp = @import("../../App.zig");
+const apprt = @import("action.zig");
+const CoreApp = @import("../App.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -230,7 +230,6 @@ pub const ApplicationImpl = struct {
     ) !bool {
         _ = self;
         _ = target;
-        _ = action;
         _ = value;
         // TODO: Implement action dispatch
         return false;
