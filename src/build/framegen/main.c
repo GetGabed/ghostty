@@ -1,13 +1,88 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <zlib.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <sys/stat.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
+
 #define SEPARATOR '\x01'
 #define CHUNK_SIZE 16384
+
+#ifdef _WIN32
+struct dirent {
+    char d_name[MAX_PATH];
+};
+
+static int scandir_windows(
+    const char *dirpath,
+    struct dirent ***namelist,
+    int (*filter)(const struct dirent *),
+    int (*compar)(const struct dirent **, const struct dirent **)
+) {
+    WIN32_FIND_DATA find_data;
+    HANDLE find_handle;
+    char search_path[MAX_PATH];
+    struct dirent **entries = NULL;
+    int count = 0;
+    int capacity = 10;
+
+    snprintf(search_path, sizeof(search_path), "%s\\*", dirpath);
+    find_handle = FindFirstFileA(search_path, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        *namelist = NULL;
+        return -1;
+    }
+
+    entries = malloc(capacity * sizeof(struct dirent *));
+    if (!entries) {
+        FindClose(find_handle);
+        return -1;
+    }
+
+    do {
+        struct dirent entry = {0};
+        strcpy_s(entry.d_name, sizeof(entry.d_name), find_data.cFileName);
+        
+        if (!filter || filter(&entry)) {
+            if (count >= capacity) {
+                capacity *= 2;
+                struct dirent **tmp = realloc(entries, capacity * sizeof(struct dirent *));
+                if (!tmp) {
+                    FindClose(find_handle);
+                    return -1;
+                }
+                entries = tmp;
+            }
+            entries[count] = malloc(sizeof(struct dirent));
+            if (!entries[count]) {
+                FindClose(find_handle);
+                return -1;
+            }
+            memcpy(entries[count], &entry, sizeof(struct dirent));
+            count++;
+        }
+    } while (FindNextFileA(find_handle, &find_data));
+
+    FindClose(find_handle);
+
+    if (compar && count > 0) {
+        qsort(entries, count, sizeof(struct dirent *), 
+              (int (*)(const void *, const void *))compar);
+    }
+
+    *namelist = entries;
+    return count;
+}
+
+#define scandir scandir_windows
+#endif
 
 static int filter_frames(const struct dirent *entry) {
     const char *name = entry->d_name;
@@ -72,7 +147,11 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < n; i++) {
         char path[4096];
+#ifdef _WIN32
+        snprintf(path, sizeof(path), "%s\\%s", frames_dir, namelist[i]->d_name);
+#else
         snprintf(path, sizeof(path), "%s/%s", frames_dir, namelist[i]->d_name);
+#endif
         
         frame_contents[i] = read_file(path, &frame_sizes[i]);
         if (!frame_contents[i]) {
